@@ -1,0 +1,43 @@
+{
+  "name": "tsab-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "seed:admin" : "tsx src/seedAdmin.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@getbrevo/brevo": "^5.0.4",
+    "@types/nodemailer": "^8.0.0",
+    "axios": "^1.15.2",
+    "bcrypt": "^6.0.0",
+    "brevo": "^1.0.0",
+    "cloudinary": "^2.9.0",
+    "cors": "^2.8.6",
+    "crypto": "^1.0.1",
+    "dns": "^0.2.2",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "leaflet": "^1.9.4",
+    "mongoose": "^9.4.1",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.5",
+    "react-leaflet": "^5.0.0",
+    "toast": "^0.5.4"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}
