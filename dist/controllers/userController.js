@@ -41,6 +41,7 @@ const updateUserDetails = async (req, res) => {
                 fullName: user.fullName,
                 email: user.email,
                 role: user.role,
+                avatar: user.avatar ?? null,
             },
         });
     }

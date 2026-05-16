@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateProperty = exports.updatePropertyStatus = exports.getPropertyById = exports.getProperties = exports.createProperty = void 0;
+exports.updateProperty = exports.updatePropertyImages = exports.updatePropertyStatus = exports.getPropertyById = exports.getProperties = exports.createProperty = void 0;
 const cloudinary_1 = __importDefault(require("../config/cloudinary"));
 const Property_1 = __importDefault(require("../models/Property"));
 const getCoordinates_1 = require("../utils/getCoordinates");
@@ -130,6 +130,67 @@ const updatePropertyStatus = async (req, res) => {
     }
 };
 exports.updatePropertyStatus = updatePropertyStatus;
+function getPublicIdFromUrl(url) {
+    try {
+        const parts = url.split("/upload/");
+        if (parts.length < 2)
+            return "";
+        let path = parts[1];
+        path = path.replace(/^v\d+\//, "");
+        path = path.replace(/\.[^.]+$/, "");
+        return path;
+    }
+    catch {
+        return "";
+    }
+}
+const updatePropertyImages = async (req, res) => {
+    try {
+        const property = await Property_1.default.findById(req.params.id);
+        if (!property)
+            return res.status(404).json({ message: "Property not found" });
+        const removedImages = req.body.removedImages
+            ? JSON.parse(req.body.removedImages)
+            : [];
+        const keepImages = req.body.keepImages
+            ? JSON.parse(req.body.keepImages)
+            : [...property.images];
+        // Delete removed images from Cloudinary
+        if (removedImages.length > 0) {
+            await Promise.allSettled(removedImages.map((url) => {
+                const publicId = getPublicIdFromUrl(url);
+                return publicId ? cloudinary_1.default.uploader.destroy(publicId) : Promise.resolve();
+            }));
+        }
+        // Upload new images
+        const files = req.files;
+        let newImageUrls = [];
+        if (files && files.length > 0) {
+            newImageUrls = await Promise.all(files.map((file) => new Promise((resolve, reject) => {
+                cloudinary_1.default.uploader
+                    .upload_stream({ folder: "properties" }, (error, result) => {
+                    if (error)
+                        reject(error);
+                    else
+                        resolve(result.secure_url);
+                })
+                    .end(file.buffer);
+            })));
+        }
+        const updatedImages = [...keepImages, ...newImageUrls];
+        if (updatedImages.length === 0) {
+            return res.status(400).json({ message: "Property must have at least one image" });
+        }
+        property.images = updatedImages;
+        await property.save();
+        res.json({ message: "Images updated", property });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Failed to update images" });
+    }
+};
+exports.updatePropertyImages = updatePropertyImages;
 const updateProperty = async (req, res) => {
     try {
         const body = req.body;

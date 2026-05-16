@@ -12,6 +12,7 @@ const router = express_1.default.Router();
 router.post("/", upload_js_1.default.array("images", 10), propertyController_js_1.createProperty);
 router.get("/", propertyController_js_1.getProperties);
 router.patch("/:id/status", authMiddleware_js_1.Protect, propertyController_js_1.updatePropertyStatus);
+router.patch("/:id/images", authMiddleware_js_1.Protect, upload_js_1.default.array("images", 10), propertyController_js_1.updatePropertyImages);
 router.patch("/:id", authMiddleware_js_1.Protect, propertyController_js_1.updateProperty);
 router.get("/:id", propertyController_js_1.getPropertyById);
 exports.default = router;

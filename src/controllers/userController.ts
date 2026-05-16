@@ -45,6 +45,7 @@ export const updateUserDetails = async (req: AuthRequest, res: Response) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        avatar: user.avatar ?? null,
       },
     });
   } catch (error) {

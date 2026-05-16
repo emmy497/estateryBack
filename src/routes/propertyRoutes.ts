@@ -5,6 +5,7 @@ import {
   getPropertyById,
   updateProperty,
   updatePropertyStatus,
+  updatePropertyImages,
 } from "../controllers/propertyController.js";
 import upload from "../middleware/upload.js";
 import { Protect } from "../middleware/authMiddleware.js";
@@ -16,6 +17,7 @@ router.post("/", upload.array("images", 10), createProperty);
 router.get("/", getProperties);
 
 router.patch("/:id/status", Protect, updatePropertyStatus);
+router.patch("/:id/images", Protect, upload.array("images", 10), updatePropertyImages);
 router.patch("/:id", Protect, updateProperty);
 
 router.get("/:id", getPropertyById);

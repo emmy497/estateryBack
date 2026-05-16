@@ -65,6 +65,7 @@ const signupUser = async (req, res) => {
             fullName: user.fullName,
             email: user.email,
             role: user.role,
+            avatar: user.avatar ?? null,
             token: generateToken(user._id.toString(), user.role),
         });
     }
@@ -100,6 +101,7 @@ const loginUser = async (req, res) => {
                 fullName: user.fullName,
                 email: user.email,
                 role: user.role,
+                avatar: user.avatar ?? null,
             },
             token: generateToken(user._id.toString(), user.role),
         });

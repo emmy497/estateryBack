@@ -86,6 +86,7 @@ export const signupUser = async (
       fullName: user.fullName,
       email: user.email,
       role: user.role,
+      avatar: user.avatar ?? null,
       token: generateToken(user._id.toString(), user.role),
     });
   } catch (error: unknown) {
@@ -127,6 +128,7 @@ export const loginUser = async (req: Request, res: Response) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        avatar: user.avatar ?? null,
       },
       token: generateToken(user._id.toString(), user.role),
     });

@@ -149,6 +149,76 @@ export const updatePropertyStatus = async (req: AuthRequest, res: any) => {
   }
 };
 
+function getPublicIdFromUrl(url: string): string {
+  try {
+    const parts = url.split("/upload/");
+    if (parts.length < 2) return "";
+    let path = parts[1];
+    path = path.replace(/^v\d+\//, "");
+    path = path.replace(/\.[^.]+$/, "");
+    return path;
+  } catch {
+    return "";
+  }
+}
+
+export const updatePropertyImages = async (req: AuthRequest, res: any) => {
+  try {
+    const property = await Property.findById(req.params.id);
+    if (!property) return res.status(404).json({ message: "Property not found" });
+
+    const removedImages: string[] = req.body.removedImages
+      ? JSON.parse(req.body.removedImages)
+      : [];
+
+    const keepImages: string[] = req.body.keepImages
+      ? JSON.parse(req.body.keepImages)
+      : [...property.images];
+
+    // Delete removed images from Cloudinary
+    if (removedImages.length > 0) {
+      await Promise.allSettled(
+        removedImages.map((url) => {
+          const publicId = getPublicIdFromUrl(url);
+          return publicId ? cloudinary.uploader.destroy(publicId) : Promise.resolve();
+        })
+      );
+    }
+
+    // Upload new images
+    const files = req.files as Express.Multer.File[];
+    let newImageUrls: string[] = [];
+    if (files && files.length > 0) {
+      newImageUrls = await Promise.all(
+        files.map(
+          (file) =>
+            new Promise<string>((resolve, reject) => {
+              cloudinary.uploader
+                .upload_stream({ folder: "properties" }, (error, result) => {
+                  if (error) reject(error);
+                  else resolve((result as any).secure_url);
+                })
+                .end(file.buffer);
+            })
+        )
+      );
+    }
+
+    const updatedImages = [...keepImages, ...newImageUrls];
+    if (updatedImages.length === 0) {
+      return res.status(400).json({ message: "Property must have at least one image" });
+    }
+
+    property.images = updatedImages;
+    await property.save();
+
+    res.json({ message: "Images updated", property });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to update images" });
+  }
+};
+
 export const updateProperty = async (req: AuthRequest, res: any) => {
   try {
     const body = req.body as Record<string, unknown>;
