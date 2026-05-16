@@ -6,9 +6,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.resetPasswordWithOTP = exports.verifyOtp = exports.sendOtp = exports.loginUser = exports.signupUser = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const User_1 = __importDefault(require("../models/User"));
+const User_js_1 = __importDefault(require("../models/User.js"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const sendEmail_1 = require("../utils/sendEmail");
+const sendEmail_js_1 = require("../utils/sendEmail.js");
+const emailTemplate_js_1 = require("../utils/emailTemplate.js");
 dotenv_1.default.config();
 // Generate JWT
 const generateToken = (id, role) => {
@@ -21,12 +22,12 @@ const signupUser = async (req, res) => {
     try {
         const { fullName, email, password, role } = req.body;
         // check if user exists (email only)
-        const userExists = await User_1.default.findOne({ email });
+        const userExists = await User_js_1.default.findOne({ email });
         if (userExists) {
             res.status(400).json({ message: "User already exists" });
             return;
         }
-        const user = new User_1.default({
+        const user = new User_js_1.default({
             fullName,
             email,
             role,
@@ -38,6 +39,27 @@ const signupUser = async (req, res) => {
         }
         await user.setPassword(password);
         await user.save();
+        try {
+            console.log("Sending welcome email to:", user.email);
+            await (0, sendEmail_js_1.sendEmail)(user.email, "Welcome to Estatery!", (0, emailTemplate_js_1.emailTemplate)(`
+          <h2 style="margin-top:0;color:#7065F0;">Welcome to Estatery, ${user.fullName}! 🎉</h2>
+          <p>We're thrilled to have you on board. Your account has been created successfully.</p>
+          ${emailTemplate_js_1.divider}
+          <p style="margin-bottom:6px;">Here's what you can do on Estatery:</p>
+          <ul style="padding-left:20px;color:#555;line-height:2;">
+            <li>Browse thousands of properties for rent and sale</li>
+            <li>Save your favourite listings</li>
+            <li>Schedule property tours with ease</li>
+            <li>List your own property</li>
+          </ul>
+          ${emailTemplate_js_1.divider}
+          <p>If you have any questions, our team is always happy to help.</p>
+        `), user.fullName);
+            console.log("Welcome email sent to:", user.email);
+        }
+        catch (emailError) {
+            console.error("Welcome email failed:", emailError);
+        }
         res.status(201).json({
             _id: user._id,
             fullName: user.fullName,
@@ -64,7 +86,7 @@ exports.signupUser = signupUser;
 const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await User_1.default.findOne({ email }).select("+password");
+        const user = await User_js_1.default.findOne({ email }).select("+password");
         if (!user) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
@@ -98,7 +120,7 @@ const sendOtp = async (req, res) => {
             });
             return;
         }
-        const user = (await User_1.default.findOne({ email }).select("+resetOTP +resetOTPExpires"));
+        const user = (await User_js_1.default.findOne({ email }).select("+resetOTP +resetOTPExpires"));
         if (!user) {
             res.status(404).json({
                 success: false,
@@ -108,7 +130,22 @@ const sendOtp = async (req, res) => {
         }
         const otp = user.generateOTP();
         await user.save();
-        await (0, sendEmail_1.sendEmail)(user.email, "Your OTP Code", `<h2>Your OTP is: ${otp}</h2><p>Expires in 20 minutes</p>`);
+        await (0, sendEmail_js_1.sendEmail)(user.email, "Reset Your Password – Estatery", (0, emailTemplate_js_1.emailTemplate)(`
+        <h2 style="margin-top:0;color:#7065F0;">Reset Your Password</h2>
+        <p>Hi <strong>${user.fullName || "User"}</strong>,</p>
+        <p>We received a request to reset your Estatery password. Use the verification code below to proceed.</p>
+        ${emailTemplate_js_1.divider}
+        <p style="margin-bottom:8px;color:#888;font-size:13px;">YOUR VERIFICATION CODE</p>
+        <p style="font-size:36px;font-weight:bold;text-align:center;letter-spacing:6px;color:#7065F0;margin:0 0 8px;">
+          ${otp}
+        </p>
+        <p style="text-align:center;font-size:13px;color:#999;margin-top:4px;">Expires in <strong>15 minutes</strong></p>
+        ${emailTemplate_js_1.divider}
+        <p style="font-size:13px;color:#888;">
+          If you didn’t request a password reset, you can safely ignore this email.
+          <strong>Do not share this code with anyone.</strong>
+        </p>
+      `), user.fullName);
         res.json({
             success: true,
             message: "OTP sent successfully",
@@ -131,7 +168,7 @@ const verifyOtp = async (req, res) => {
                 message: "Email and OTP are required",
             });
         }
-        const user = (await User_1.default.findOne({ email }).select("+resetOTP +resetOTPExpires"));
+        const user = (await User_js_1.default.findOne({ email }).select("+resetOTP +resetOTPExpires"));
         if (!user || !user.verifyOTP(otp)) {
             return res.status(400).json({
                 message: "Invalid or expired OTP",
@@ -153,7 +190,7 @@ exports.verifyOtp = verifyOtp;
 const resetPasswordWithOTP = async (req, res) => {
     try {
         const { email, newPassword } = req.body;
-        const user = await User_1.default.findOne({ email }).select("+password");
+        const user = await User_js_1.default.findOne({ email }).select("+password");
         if (!user) {
             return res.status(404).json({
                 message: "User not found",

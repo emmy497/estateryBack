@@ -3,9 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUserAccount = exports.updatePassword = exports.updateUserDetails = void 0;
+exports.deleteUserAccount = exports.getAllUsers = exports.updateUserAvatar = exports.updatePassword = exports.updateUserDetails = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const User_1 = __importDefault(require("../models/User"));
+const cloudinary_1 = __importDefault(require("../config/cloudinary"));
 // UPDATE USER DETAILS
 const updateUserDetails = async (req, res) => {
     try {
@@ -105,6 +106,68 @@ const updatePassword = async (req, res) => {
     }
 };
 exports.updatePassword = updatePassword;
+// UPDATE USER AVATAR
+const updateUserAvatar = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const file = req.file;
+        // Validate input
+        if (!userId) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+        if (!file) {
+            return res.status(400).json({ message: "No file provided" });
+        }
+        // Find user
+        const user = await User_1.default.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        // Upload to Cloudinary
+        const result = await new Promise((resolve, reject) => {
+            cloudinary_1.default.uploader
+                .upload_stream({ folder: "profile_photos" }, (error, result) => {
+                if (error)
+                    reject(error);
+                else
+                    resolve(result);
+            })
+                .end(file.buffer);
+        });
+        // Update user avatar
+        user.avatar = result.secure_url;
+        await user.save();
+        res.status(200).json({
+            message: "Profile photo updated successfully",
+            user: {
+                _id: user._id,
+                fullName: user.fullName,
+                email: user.email,
+                avatar: user.avatar,
+                role: user.role,
+            },
+        });
+    }
+    catch (error) {
+        console.error("updateUserAvatar:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+exports.updateUserAvatar = updateUserAvatar;
+// GET ALL USERS (admin)
+const getAllUsers = async (req, res) => {
+    try {
+        const users = await User_1.default.find({ role: "user" })
+            .select("fullName email phoneNumber isActive createdAt")
+            .sort({ createdAt: -1 });
+        res.status(200).json(users);
+    }
+    catch (error) {
+        console.error("getAllUsers:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+exports.getAllUsers = getAllUsers;
 // DELETE USER ACCOUNT
 const deleteUserAccount = async (req, res) => {
     try {

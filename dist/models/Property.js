@@ -33,7 +33,6 @@ const propertySchema = new mongoose_1.default.Schema({
     createdBy: {
         type: mongoose_1.default.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
     },
     contactPhone: { type: String, required: true },
     contactEmail: { type: String, required: true },
