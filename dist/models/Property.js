@@ -36,5 +36,7 @@ const propertySchema = new mongoose_1.default.Schema({
     },
     contactPhone: { type: String, required: true },
     contactEmail: { type: String, required: true },
+    agentName: { type: String, default: "" },
+    agentImage: { type: String, default: "" },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("Property", propertySchema);

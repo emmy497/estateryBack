@@ -10,24 +10,28 @@ const getCoordinates_1 = require("../utils/getCoordinates");
 const createProperty = async (req, res) => {
     try {
         const files = req.files;
-        if (!files || files.length === 0) {
+        const propertyImages = files?.images ?? [];
+        if (propertyImages.length === 0) {
             return res.status(400).json({ message: "No images uploaded" });
         }
-        // 1. Upload images to Cloudinary
-        const uploadResults = await Promise.all(files.map((file) => {
-            return new Promise((resolve, reject) => {
-                cloudinary_1.default.uploader
-                    .upload_stream({ folder: "properties" }, (error, result) => {
-                    if (error)
-                        reject(error);
-                    else
-                        resolve(result);
-                })
-                    .end(file.buffer);
-            });
-        }));
-        const imageUrls = uploadResults.map((r) => r.secure_url);
-        // 2. Prepare property data (NO coordinates yet)
+        const uploadFile = (file, folder) => new Promise((resolve, reject) => {
+            cloudinary_1.default.uploader
+                .upload_stream({ folder }, (error, result) => {
+                if (error)
+                    reject(error);
+                else
+                    resolve(result.secure_url);
+            })
+                .end(file.buffer);
+        });
+        // 1. Upload property images
+        const imageUrls = await Promise.all(propertyImages.map((f) => uploadFile(f, "properties")));
+        // 2. Upload agent image (optional)
+        let agentImageUrl = "";
+        if (files?.agentImage?.[0]) {
+            agentImageUrl = await uploadFile(files.agentImage[0], "agents");
+        }
+        // 3. Prepare property data (NO coordinates yet)
         const propertyData = {
             ...req.body,
             price: Number(req.body.price),
@@ -37,7 +41,8 @@ const createProperty = async (req, res) => {
             parking: Number(req.body.parking),
             features: req.body.features ? JSON.parse(req.body.features) : [],
             images: imageUrls,
-            coordinates: null, //  temporarily null
+            agentImage: agentImageUrl,
+            coordinates: null,
         };
         // 3. Save property FIRST (fast response)
         const property = await Property_1.default.create(propertyData);
@@ -208,6 +213,7 @@ const updateProperty = async (req, res) => {
             "features",
             "contactPhone",
             "contactEmail",
+            "agentName",
         ];
         const updates = {};
         for (const key of allowedKeys) {

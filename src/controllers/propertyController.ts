@@ -5,29 +5,38 @@ import type { AuthRequest } from "../middleware/authMiddleware";
 
 export const createProperty = async (req: any, res: any) => {
   try {
-    const files = req.files;
+    const files = req.files as {
+      images?: Express.Multer.File[];
+      agentImage?: Express.Multer.File[];
+    };
 
-    if (!files || files.length === 0) {
+    const propertyImages = files?.images ?? [];
+    if (propertyImages.length === 0) {
       return res.status(400).json({ message: "No images uploaded" });
     }
 
-    // 1. Upload images to Cloudinary
-    const uploadResults = await Promise.all(
-      files.map((file: any) => {
-        return new Promise((resolve, reject) => {
-          cloudinary.uploader
-            .upload_stream({ folder: "properties" }, (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            })
-            .end(file.buffer);
-        });
-      }),
+    const uploadFile = (file: Express.Multer.File, folder: string) =>
+      new Promise<string>((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream({ folder }, (error, result) => {
+            if (error) reject(error);
+            else resolve((result as any).secure_url);
+          })
+          .end(file.buffer);
+      });
+
+    // 1. Upload property images
+    const imageUrls = await Promise.all(
+      propertyImages.map((f) => uploadFile(f, "properties")),
     );
 
-    const imageUrls = uploadResults.map((r: any) => r.secure_url);
+    // 2. Upload agent image (optional)
+    let agentImageUrl = "";
+    if (files?.agentImage?.[0]) {
+      agentImageUrl = await uploadFile(files.agentImage[0], "agents");
+    }
 
-    // 2. Prepare property data (NO coordinates yet)
+    // 3. Prepare property data (NO coordinates yet)
     const propertyData = {
       ...req.body,
       price: Number(req.body.price),
@@ -39,7 +48,8 @@ export const createProperty = async (req: any, res: any) => {
       features: req.body.features ? JSON.parse(req.body.features) : [],
 
       images: imageUrls,
-      coordinates: null, //  temporarily null
+      agentImage: agentImageUrl,
+      coordinates: null,
     };
 
     // 3. Save property FIRST (fast response)
@@ -236,6 +246,7 @@ export const updateProperty = async (req: AuthRequest, res: any) => {
       "features",
       "contactPhone",
       "contactEmail",
+      "agentName",
     ];
 
     const updates: Record<string, unknown> = {};

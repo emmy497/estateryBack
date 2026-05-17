@@ -24,6 +24,8 @@ export interface IProperty extends Document {
 
   contactPhone: string;
   contactEmail: string;
+  agentName: string;
+  agentImage: string;
 }
 
 const propertySchema: Schema<IProperty> = new mongoose.Schema(
@@ -68,6 +70,8 @@ const propertySchema: Schema<IProperty> = new mongoose.Schema(
 
     contactPhone: { type: String, required: true },
     contactEmail: { type: String, required: true },
+    agentName: { type: String, default: "" },
+    agentImage: { type: String, default: "" },
   },
   { timestamps: true },
 );

@@ -9,7 +9,10 @@ const upload_js_1 = __importDefault(require("../middleware/upload.js"));
 const authMiddleware_js_1 = require("../middleware/authMiddleware.js");
 const router = express_1.default.Router();
 // CREATE PROPERTY
-router.post("/", upload_js_1.default.array("images", 10), propertyController_js_1.createProperty);
+router.post("/", upload_js_1.default.fields([
+    { name: "images", maxCount: 10 },
+    { name: "agentImage", maxCount: 1 },
+]), propertyController_js_1.createProperty);
 router.get("/", propertyController_js_1.getProperties);
 router.patch("/:id/status", authMiddleware_js_1.Protect, propertyController_js_1.updatePropertyStatus);
 router.patch("/:id/images", authMiddleware_js_1.Protect, upload_js_1.default.array("images", 10), propertyController_js_1.updatePropertyImages);

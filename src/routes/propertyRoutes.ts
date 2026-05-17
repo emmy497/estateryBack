@@ -13,7 +13,14 @@ import { Protect } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 // CREATE PROPERTY
-router.post("/", upload.array("images", 10), createProperty);
+router.post(
+  "/",
+  upload.fields([
+    { name: "images", maxCount: 10 },
+    { name: "agentImage", maxCount: 1 },
+  ]),
+  createProperty,
+);
 router.get("/", getProperties);
 
 router.patch("/:id/status", Protect, updatePropertyStatus);
