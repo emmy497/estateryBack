@@ -9,6 +9,7 @@ const authMiddleware_1 = require("../middleware/authMiddleware");
 const upload_1 = __importDefault(require("../middleware/upload"));
 const router = express_1.default.Router();
 router.get("/", authMiddleware_1.Protect, authMiddleware_1.adminOnly, userController_1.getAllUsers);
+router.patch("/:id/status", authMiddleware_1.Protect, authMiddleware_1.adminOnly, userController_1.toggleUserStatus);
 router.put("/update", authMiddleware_1.Protect, userController_1.updateUserDetails);
 router.put("/update-details", authMiddleware_1.Protect, userController_1.updateUserDetails);
 router.put("/update-password", authMiddleware_1.Protect, userController_1.updatePassword);

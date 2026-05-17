@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUserAccount = exports.getAllUsers = exports.updateUserAvatar = exports.updatePassword = exports.updateUserDetails = void 0;
+exports.deleteUserAccount = exports.toggleUserStatus = exports.getAllUsers = exports.updateUserAvatar = exports.updatePassword = exports.updateUserDetails = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const User_1 = __importDefault(require("../models/User"));
 const cloudinary_1 = __importDefault(require("../config/cloudinary"));
@@ -159,7 +159,7 @@ exports.updateUserAvatar = updateUserAvatar;
 const getAllUsers = async (req, res) => {
     try {
         const users = await User_1.default.find({ role: "user" })
-            .select("fullName email phoneNumber isActive createdAt")
+            .select("fullName email phoneNumber avatar isActive createdAt")
             .sort({ createdAt: -1 });
         res.status(200).json(users);
     }
@@ -169,6 +169,25 @@ const getAllUsers = async (req, res) => {
     }
 };
 exports.getAllUsers = getAllUsers;
+// TOGGLE USER ACTIVE STATUS (admin)
+const toggleUserStatus = async (req, res) => {
+    try {
+        const user = await User_1.default.findById(req.params.id);
+        if (!user)
+            return res.status(404).json({ message: "User not found" });
+        user.isActive = !user.isActive;
+        await user.save();
+        res.status(200).json({
+            message: `User ${user.isActive ? "activated" : "deactivated"}`,
+            user: { _id: user._id, isActive: user.isActive },
+        });
+    }
+    catch (error) {
+        console.error("toggleUserStatus:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+exports.toggleUserStatus = toggleUserStatus;
 // DELETE USER ACCOUNT
 const deleteUserAccount = async (req, res) => {
     try {
