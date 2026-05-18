@@ -7,6 +7,7 @@ import cors from "cors";
 import propertyRoutes from "./routes/propertyRoutes";
 import tourRoutes from "./routes/tourRoutes";
 import listingRoutes from "./routes/listingRoutes";
+import newsletterRoutes from "./routes/newsletterRoutes";
 import dns from "dns";
 
 try {
@@ -35,6 +36,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/properties", propertyRoutes);
 app.use("/api/tours", tourRoutes);
 app.use("/api/listing-requests", listingRoutes);
+app.use("/api/newsletter", newsletterRoutes);
 
 const PORT = Number(process.env.PORT ?? 3002);
 const mongoUri = process.env.MONGO_URI;

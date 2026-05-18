@@ -12,6 +12,7 @@ const cors_1 = __importDefault(require("cors"));
 const propertyRoutes_1 = __importDefault(require("./routes/propertyRoutes"));
 const tourRoutes_1 = __importDefault(require("./routes/tourRoutes"));
 const listingRoutes_1 = __importDefault(require("./routes/listingRoutes"));
+const newsletterRoutes_1 = __importDefault(require("./routes/newsletterRoutes"));
 const dns_1 = __importDefault(require("dns"));
 try {
     dns_1.default.setServers(["8.8.8.8", "1.1.1.1"]);
@@ -34,6 +35,7 @@ app.use("/api/user", userRoutes_1.default);
 app.use("/api/properties", propertyRoutes_1.default);
 app.use("/api/tours", tourRoutes_1.default);
 app.use("/api/listing-requests", listingRoutes_1.default);
+app.use("/api/newsletter", newsletterRoutes_1.default);
 const PORT = Number(process.env.PORT ?? 3002);
 const mongoUri = process.env.MONGO_URI;
 if (!mongoUri) {

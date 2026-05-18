@@ -37,7 +37,7 @@ const createProperty = async (req, res) => {
             price: Number(req.body.price),
             beds: Number(req.body.beds),
             baths: Number(req.body.baths),
-            area: Number(req.body.area),
+            area: req.body.area || "",
             parking: Number(req.body.parking),
             features: req.body.features ? JSON.parse(req.body.features) : [],
             images: imageUrls,
