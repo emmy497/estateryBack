@@ -65,6 +65,7 @@ const userSchema = new mongoose_1.Schema({
         index: true,
     },
     isActive: { type: Boolean, default: true, index: true },
+    isEmailVerified: { type: Boolean, default: false },
     lastLoginAt: { type: Date },
     resetOTP: { type: String, select: false },
     resetOTPExpires: { type: Date, select: false },

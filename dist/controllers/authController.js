@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resetPasswordWithOTP = exports.verifyOtp = exports.sendOtp = exports.loginUser = exports.signupUser = void 0;
+exports.resetPasswordWithOTP = exports.resendSignupOtp = exports.verifyEmail = exports.verifyOtp = exports.sendOtp = exports.loginUser = exports.signupUser = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_js_1 = __importDefault(require("../models/User.js"));
@@ -39,11 +39,20 @@ const signupUser = async (req, res) => {
         }
         await user.setPassword(password);
         await user.save();
+        // Generate OTP for email verification
+        const otp = user.generateOTP();
+        await user.save();
         try {
             console.log("Sending welcome email to:", user.email);
-            await (0, sendEmail_js_1.sendEmail)(user.email, "Welcome to Estatery!", (0, emailTemplate_js_1.emailTemplate)(`
+            await (0, sendEmail_js_1.sendEmail)(user.email, "Welcome to Estatery – Verify Your Email", (0, emailTemplate_js_1.emailTemplate)(`
           <h2 style="margin-top:0;color:#7065F0;">Welcome to Estatery, ${user.fullName}! 🎉</h2>
-          <p>We're thrilled to have you on board. Your account has been created successfully.</p>
+          <p>We're thrilled to have you on board. To get started, please verify your email address using the code below.</p>
+          ${emailTemplate_js_1.divider}
+          <p style="margin-bottom:8px;color:#888;font-size:13px;">YOUR VERIFICATION CODE</p>
+          <p style="font-size:36px;font-weight:bold;text-align:center;letter-spacing:6px;color:#7065F0;margin:0 0 8px;">
+            ${otp}
+          </p>
+          <p style="text-align:center;font-size:13px;color:#999;margin-top:4px;">Expires in <strong>15 minutes</strong></p>
           ${emailTemplate_js_1.divider}
           <p style="margin-bottom:6px;">Here's what you can do on Estatery:</p>
           <ul style="padding-left:20px;color:#555;line-height:2;">
@@ -53,7 +62,7 @@ const signupUser = async (req, res) => {
             <li>List your own property</li>
           </ul>
           ${emailTemplate_js_1.divider}
-          <p>If you have any questions, our team is always happy to help.</p>
+          <p style="font-size:13px;color:#888;">If you didn't create this account, you can safely ignore this email.</p>
         `), user.fullName);
             console.log("Welcome email sent to:", user.email);
         }
@@ -61,12 +70,8 @@ const signupUser = async (req, res) => {
             console.error("Welcome email failed:", emailError);
         }
         res.status(201).json({
-            _id: user._id,
-            fullName: user.fullName,
+            message: "Account created. Please check your email for the verification code.",
             email: user.email,
-            role: user.role,
-            avatar: user.avatar ?? null,
-            token: generateToken(user._id.toString(), user.role),
         });
     }
     catch (error) {
@@ -94,6 +99,9 @@ const loginUser = async (req, res) => {
         const isMatch = await bcrypt_1.default.compare(password, user.password || "");
         if (!isMatch) {
             return res.status(400).json({ message: "Invalid credentials" });
+        }
+        if (!user.isEmailVerified) {
+            return res.status(403).json({ message: "Please verify your email before logging in." });
         }
         res.json({
             user: {
@@ -189,6 +197,64 @@ const verifyOtp = async (req, res) => {
     }
 };
 exports.verifyOtp = verifyOtp;
+const verifyEmail = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        if (!email || !otp) {
+            return res.status(400).json({ message: "Email and OTP are required" });
+        }
+        const user = (await User_js_1.default.findOne({ email }).select("+resetOTP +resetOTPExpires"));
+        if (!user || !user.verifyOTP(otp)) {
+            return res.status(400).json({ message: "Invalid or expired OTP" });
+        }
+        user.isEmailVerified = true;
+        user.isOTPVerified = true;
+        user.resetOTP = undefined;
+        user.resetOTPExpires = undefined;
+        await user.save();
+        return res.json({ success: true, message: "Email verified successfully" });
+    }
+    catch (error) {
+        console.error("verifyEmail:", error);
+        return res.status(500).json({ message: "Verification failed" });
+    }
+};
+exports.verifyEmail = verifyEmail;
+const resendSignupOtp = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            res.status(400).json({ message: "Email is required" });
+            return;
+        }
+        const user = (await User_js_1.default.findOne({ email }).select("+resetOTP +resetOTPExpires"));
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        const otp = user.generateOTP();
+        await user.save();
+        await (0, sendEmail_js_1.sendEmail)(user.email, "Your New Verification Code – Estatery", (0, emailTemplate_js_1.emailTemplate)(`
+        <h2 style="margin-top:0;color:#7065F0;">New Verification Code</h2>
+        <p>Hi <strong>${user.fullName}</strong>,</p>
+        <p>Here is your new email verification code:</p>
+        ${emailTemplate_js_1.divider}
+        <p style="margin-bottom:8px;color:#888;font-size:13px;">YOUR VERIFICATION CODE</p>
+        <p style="font-size:36px;font-weight:bold;text-align:center;letter-spacing:6px;color:#7065F0;margin:0 0 8px;">
+          ${otp}
+        </p>
+        <p style="text-align:center;font-size:13px;color:#999;margin-top:4px;">Expires in <strong>15 minutes</strong></p>
+        ${emailTemplate_js_1.divider}
+        <p style="font-size:13px;color:#888;">If you didn't request this, please ignore this email.</p>
+      `), user.fullName);
+        res.json({ success: true, message: "Verification code resent" });
+    }
+    catch (error) {
+        console.error("resendSignupOtp:", error);
+        res.status(500).json({ message: "Failed to resend code" });
+    }
+};
+exports.resendSignupOtp = resendSignupOtp;
 const resetPasswordWithOTP = async (req, res) => {
     try {
         const { email, newPassword } = req.body;
