@@ -100,7 +100,7 @@ const loginUser = async (req, res) => {
         if (!isMatch) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
-        if (!user.isEmailVerified) {
+        if (!user.isEmailVerified && user.role !== "admin") {
             return res.status(403).json({ message: "Please verify your email before logging in." });
         }
         res.json({
