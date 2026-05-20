@@ -92,12 +92,8 @@ export const signupUser = async (
     }
 
     res.status(201).json({
-      _id: user._id,
-      fullName: user.fullName,
+      message: "Account created. Please check your email for the verification code.",
       email: user.email,
-      role: user.role,
-      avatar: user.avatar ?? null,
-      token: generateToken(user._id.toString(), user.role),
     });
   } catch (error: unknown) {
     const code =
@@ -130,6 +126,10 @@ export const loginUser = async (req: Request, res: Response) => {
     const isMatch = await bcrypt.compare(password, user.password || "");
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    if (!user.isEmailVerified) {
+      return res.status(403).json({ message: "Please verify your email before logging in." });
     }
 
     res.json({
@@ -264,6 +264,7 @@ export const verifyEmail = async (
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
+    user.isEmailVerified = true;
     user.isOTPVerified = true;
     user.resetOTP = undefined;
     user.resetOTPExpires = undefined;
