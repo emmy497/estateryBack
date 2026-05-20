@@ -3,9 +3,10 @@ import {
   signupUser,
   loginUser,
   sendOtp,
-  verifyOtp, 
-  resetPasswordWithOTP
- 
+  verifyOtp,
+  verifyEmail,
+  resendSignupOtp,
+  resetPasswordWithOTP,
 } from "../controllers/authController";
 // import { Protect } from "../middleware/authMiddleware";
 
@@ -16,6 +17,8 @@ router.post("/signup", signupUser);
 router.post("/login", loginUser);
 router.post("/forgot-password", sendOtp);
 router.post("/verify-otp", verifyOtp);
+router.post("/verify-email", verifyEmail);
+router.post("/resend-otp", resendSignupOtp);
 router.post("/reset-password", resetPasswordWithOTP);
 
 // Protected OTP routes (for account settings)

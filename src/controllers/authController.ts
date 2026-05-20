@@ -55,14 +55,24 @@ export const signupUser = async (
 
     await user.save();
 
+    // Generate OTP for email verification
+    const otp = user.generateOTP();
+    await user.save();
+
     try {
       console.log("Sending welcome email to:", user.email);
       await sendEmail(
         user.email,
-        "Welcome to Estatery!",
+        "Welcome to Estatery – Verify Your Email",
         emailTemplate(`
           <h2 style="margin-top:0;color:#7065F0;">Welcome to Estatery, ${user.fullName}! 🎉</h2>
-          <p>We're thrilled to have you on board. Your account has been created successfully.</p>
+          <p>We're thrilled to have you on board. To get started, please verify your email address using the code below.</p>
+          ${divider}
+          <p style="margin-bottom:8px;color:#888;font-size:13px;">YOUR VERIFICATION CODE</p>
+          <p style="font-size:36px;font-weight:bold;text-align:center;letter-spacing:6px;color:#7065F0;margin:0 0 8px;">
+            ${otp}
+          </p>
+          <p style="text-align:center;font-size:13px;color:#999;margin-top:4px;">Expires in <strong>15 minutes</strong></p>
           ${divider}
           <p style="margin-bottom:6px;">Here's what you can do on Estatery:</p>
           <ul style="padding-left:20px;color:#555;line-height:2;">
@@ -72,7 +82,7 @@ export const signupUser = async (
             <li>List your own property</li>
           </ul>
           ${divider}
-          <p>If you have any questions, our team is always happy to help.</p>
+          <p style="font-size:13px;color:#888;">If you didn't create this account, you can safely ignore this email.</p>
         `),
         user.fullName,
       );
@@ -232,6 +242,87 @@ export const verifyOtp = async (
   } catch (error) {
     console.error("verifyOtp:", error);
     return res.status(500).json({ message: "Verification failed" });
+  }
+};
+
+export const verifyEmail = async (
+  req: Request,
+  res: Response,
+): Promise<Response> => {
+  try {
+    const { email, otp }: { email: string; otp: string } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required" });
+    }
+
+    const user = (await User.findOne({ email }).select(
+      "+resetOTP +resetOTPExpires",
+    )) as IUser | null;
+
+    if (!user || !user.verifyOTP(otp)) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    user.isOTPVerified = true;
+    user.resetOTP = undefined;
+    user.resetOTPExpires = undefined;
+    await user.save();
+
+    return res.json({ success: true, message: "Email verified successfully" });
+  } catch (error) {
+    console.error("verifyEmail:", error);
+    return res.status(500).json({ message: "Verification failed" });
+  }
+};
+
+export const resendSignupOtp = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ message: "Email is required" });
+      return;
+    }
+
+    const user = (await User.findOne({ email }).select(
+      "+resetOTP +resetOTPExpires",
+    )) as IUser | null;
+
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    const otp = user.generateOTP();
+    await user.save();
+
+    await sendEmail(
+      user.email,
+      "Your New Verification Code – Estatery",
+      emailTemplate(`
+        <h2 style="margin-top:0;color:#7065F0;">New Verification Code</h2>
+        <p>Hi <strong>${user.fullName}</strong>,</p>
+        <p>Here is your new email verification code:</p>
+        ${divider}
+        <p style="margin-bottom:8px;color:#888;font-size:13px;">YOUR VERIFICATION CODE</p>
+        <p style="font-size:36px;font-weight:bold;text-align:center;letter-spacing:6px;color:#7065F0;margin:0 0 8px;">
+          ${otp}
+        </p>
+        <p style="text-align:center;font-size:13px;color:#999;margin-top:4px;">Expires in <strong>15 minutes</strong></p>
+        ${divider}
+        <p style="font-size:13px;color:#888;">If you didn't request this, please ignore this email.</p>
+      `),
+      user.fullName,
+    );
+
+    res.json({ success: true, message: "Verification code resent" });
+  } catch (error) {
+    console.error("resendSignupOtp:", error);
+    res.status(500).json({ message: "Failed to resend code" });
   }
 };
 
