@@ -83,8 +83,8 @@ const updatePassword = async (req, res) => {
                 .status(400)
                 .json({ message: "Password must be at least 6 characters long" });
         }
-        // Find user
-        const user = await User_1.default.findById(userId);
+        // Find user — must select password since it's excluded by default
+        const user = await User_1.default.findById(userId).select("+password");
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
@@ -202,8 +202,8 @@ const deleteUserAccount = async (req, res) => {
                 message: "Please provide your password to delete your account",
             });
         }
-        // Find user
-        const user = await User_1.default.findById(userId);
+        // Find user — must select password since it's excluded by default
+        const user = await User_1.default.findById(userId).select("+password");
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
